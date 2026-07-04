@@ -136,8 +136,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   <script>
-  const IMG_VER = 6; // bump to bust the browser image cache
-
   // ============ 28 Asamyukta Hastas + educational content ============
   const MUDRAS = {
     pataka:       {roman:"Pataka", deva:"पताका", meaning:"Flag", speak:"पताका",
@@ -200,35 +198,40 @@
   };
 
   // ============ Feature templates ============
+  // Data-driven: measured from images/<id>.jpg with MediaPipe Hands, computing
+  // the exact same feature vector as features() below. Regenerate with
+  // tools/gen_templates.py. A few folded-finger openness values are corrected
+  // where the 2D photo detection failed (marked "corrected"; see the script's
+  // OVERRIDES). Self-separability: 28/28, min gap 20.8 (tools/validate.py).
   const TPL = {
-    pataka:       {oI:1,oM:1,oR:1,oP:1,oT:0,  sIM:.25,sMR:.25,sRP:.25},
-    tripataka:    {oI:1,oM:1,oR:0,oP:1,oT:0},
-    ardhapataka:  {oI:1,oM:1,oR:0,oP:0,oT:0,  sIM:.25},
-    kartarimukha: {oI:1,oM:1,oR:0,oP:0,oT:0,  sIM:.75},
-    mayura:       {oI:1,oM:1,oP:1,oR:.3, dTR:.15},
-    ardhachandra: {oI:1,oM:1,oR:1,oP:1,oT:1,  sIM:.35},
-    arala:        {oM:1,oR:1,oP:1,oI:.45,oT:.35},
-    shukatunda:   {oM:1,oP:1,oI:.4,oR:.35,oT:.3},
-    mushti:       {oI:0,oM:0,oR:0,oP:0,oT:0},
-    shikhara:     {oI:0,oM:0,oR:0,oP:0,oT:1},
-    kapitha:      {oI:.15,oM:0,oR:0,oP:0,oT:.3, dTI:.25},
-    katakamukha:  {oR:1,oP:1, dTI:.25,dTM:.35},
-    suchi:        {oI:1,oM:0,oR:0,oP:0,oT:0},
-    chandrakala:  {oI:1,oM:0,oR:0,oP:0,oT:1},
-    padmakosha:   {oI:.5,oM:.5,oR:.5,oP:.5,oT:.5, sIM:.55,sMR:.55,sRP:.55},
-    sarpashirsha: {oI:.6,oM:.6,oR:.6,oP:.6,oT:.3, sIM:.2,sMR:.2},
-    mrigashirsha: {oI:0,oM:0,oR:0,oP:1,oT:1},
-    simhamukha:   {oI:1,oP:1,oM:0,oR:0, dTM:.3,dTR:.3},
-    kangula:      {oI:1,oM:1,oR:0,oP:1,oT:.45},
-    alapadma:     {oI:1,oM:1,oR:1,oP:1,oT:1, sIM:.6,sMR:.6,sRP:.6},
-    chatura:      {oI:1,oM:1,oR:1,oP:.4,oT:.2, sRP:.5},
-    bhramara:     {oR:1,oP:1,oI:.4, dTM:.2},
-    hamsasya:     {oM:1,oR:1,oP:1, dTI:.2},
-    hamsapaksha:  {oI:1,oM:1,oR:1,oP:1,oT:0, sRP:.6},
-    sandamsha:    {oM:.7,oR:.7,oP:.7, dTI:.25},
-    mukula:       {oI:.75,oM:.75,oR:.75,oP:.75, dTI:.22,dTM:.22,dTR:.22,dTP:.28, sIM:.18,sMR:.18,sRP:.18},
-    tamrachuda:   {oI:.4,oR:.6,oP:.6, dTI:.25,dTM:.25},
-    trishula:     {oI:1,oM:1,oR:1,oP:0, dTP:.2},
+    pataka:       {oI:1, oM:1, oR:1, oP:1, oT:0.05, dTI:1.31, dTM:1.49, dTR:1.39, dTP:1.11, sIM:0.24, sMR:0.21, sRP:0.38},
+    tripataka:    {oI:1, oM:1, oR:0, oP:1, oT:0, dTI:0.9, dTM:1.09, dTR:0.73, dTP:0.76, sIM:0.24, sMR:0.45, sRP:0.16},  // corrected
+    ardhapataka:  {oI:0.97, oM:0.93, oR:0, oP:0, oT:0, dTI:0.89, dTM:1.11, dTR:0.68, dTP:0.68, sIM:0.27, sMR:0.66, sRP:0.1},  // corrected
+    kartarimukha: {oI:1, oM:0.99, oR:0, oP:0, oT:0.47, dTI:1.37, dTM:1.34, dTR:0.23, dTP:0.22, sIM:0.25, sMR:1.36, sRP:0.13},
+    mayura:       {oI:1, oM:0.96, oR:0, oP:0.98, oT:0.18, dTI:1.04, dTM:1.15, dTR:0.28, dTP:0.54, sIM:0.23, sMR:0.92, sRP:0.27},
+    ardhachandra: {oI:1, oM:1, oR:1, oP:1, oT:0.52, dTI:1.48, dTM:1.68, dTR:1.65, dTP:1.49, sIM:0.23, sMR:0.18, sRP:0.36},
+    arala:        {oI:0.03, oM:0.98, oR:1, oP:0.99, oT:0.58, dTI:1, dTM:1.65, dTR:1.65, dTP:1.5, sIM:0.72, sMR:0.14, sRP:0.33},
+    shukatunda:   {oI:0.2, oM:0.94, oR:0.73, oP:0.99, oT:0, dTI:0.46, dTM:1, dTR:0.73, dTP:0.77, sIM:0.65, sMR:0.49, sRP:0.14},
+    mushti:       {oI:0, oM:0, oR:0, oP:0, oT:0},  // corrected
+    shikhara:     {oI:0.36, oM:0.03, oR:0, oP:0.27, oT:1, dTI:1.61, dTM:1.95, dTR:2.37, dTP:2.77, sIM:0.42, sMR:0.44, sRP:0.4},
+    kapitha:      {oI:0.95, oM:0.57, oR:0.43, oP:0.38, oT:0, dTI:0.57, dTM:0.96, dTR:1.15, dTP:1.24, sIM:1.52, sMR:0.25, sRP:0.22},
+    katakamukha:  {oI:1, oM:0.98, oR:0, oP:0, oT:0.05, dTI:1.09, dTM:1.28, dTR:0.2, dTP:0.32, sIM:0.28, sMR:1.29, sRP:0.12},
+    suchi:        {oI:0.87, oM:0, oR:0, oP:0, oT:0.62, dTI:1.76, dTM:0.27, dTR:0.31, dTP:0.41, sIM:1.66, sMR:0.22, sRP:0.19},
+    chandrakala:  {oI:1, oM:0, oR:0, oP:0, oT:1, dTI:2, dTM:1.54, dTR:1.76, dTP:1.99, sIM:1.57, sMR:0.27, sRP:0.23},
+    padmakosha:   {oI:0.93, oM:0.87, oR:0.85, oP:0.39, oT:0.81, dTI:0.95, dTM:1.09, dTR:0.66, dTP:0.1, sIM:0.3, sMR:0.56, sRP:0.61},
+    sarpashirsha: {oI:0.95, oM:0.97, oR:1, oP:1, oT:0, dTI:0.91, dTM:1.03, dTR:1, dTP:0.86, sIM:0.16, sMR:0.14, sRP:0.24},
+    mrigashirsha: {oI:1, oM:0.59, oR:0.74, oP:0.84, oT:0.27, dTI:0.81, dTM:1.15, dTR:1.19, dTP:0.75, sIM:1.14, sMR:0.16, sRP:0.69},
+    simhamukha:   {oI:1, oM:0.25, oR:0.25, oP:0.67, oT:0.71, dTI:1.21, dTM:0.4, dTR:0.49, dTP:0.31, sIM:0.18, sMR:0.9, sRP:0.37},  // corrected
+    kangula:      {oI:1, oM:1, oR:0, oP:1, oT:1, dTI:0.49, dTM:0.62, dTR:0.6, dTP:0.43, sIM:0.16, sMR:0.07, sRP:0.31},  // corrected
+    alapadma:     {oI:1, oM:0.94, oR:0.96, oP:1, oT:0.13, dTI:1.03, dTM:1.26, dTR:1.32, dTP:1.33, sIM:0.55, sMR:0.78, sRP:0.64},
+    chatura:      {oI:0.99, oM:0.98, oR:0.93, oP:1, oT:0, dTI:0.61, dTM:0.62, dTR:0.63, dTP:1.26, sIM:0.23, sMR:0.23, sRP:1.19},
+    bhramara:     {oI:0.07, oM:1, oR:0.27, oP:0, oT:0.65, dTI:0.44, dTM:1.11, dTR:0.26, dTP:0.43, sIM:1.1, sMR:0.89, sRP:0.3},
+    hamsasya:     {oI:0, oM:0.98, oR:1, oP:1, oT:0, dTI:0.2, dTM:0.93, dTR:0.94, dTP:0.8, sIM:0.74, sMR:0.14, sRP:0.32},
+    hamsapaksha:  {oI:0.35, oM:0.79, oR:0.92, oP:1, oT:0.2, dTI:0.24, dTM:0.39, dTR:0.6, dTP:0.7, sIM:0.37, sMR:0.3, sRP:0.5},
+    sandamsha:    {oI:0.86, oM:0.8, oR:0.85, oP:0.97, oT:1, dTI:0.28, dTM:0.34, dTR:0.32, dTP:0.29, sIM:0.08, sMR:0.04, sRP:0.26},
+    mukula:       {oI:0.76, oM:0.45, oR:0.28, oP:0.16, oT:0.55, dTI:0.27, dTM:0.19, dTR:0.21, dTP:0.24, sIM:0.18, sMR:0.14, sRP:0.11},
+    tamrachuda:   {oI:0.52, oM:0, oR:0, oP:0, oT:0.42, dTI:1.07, dTM:0.31, dTR:0.23, dTP:0.25, sIM:1.04, sMR:0.2, sRP:0.18},
+    trishula:     {oI:1, oM:1, oR:1, oP:0, oT:0.31, dTI:1.14, dTM:1.19, dTR:0.99, dTP:0.14, sIM:0.23, sMR:0.24, sRP:1.07},
   };
   const BASE = []; // [] = all 28
 
@@ -298,16 +301,22 @@
     romanEl.textContent=m.roman; devaEl.textContent=m.deva;
     fMeaning.textContent=m.meaning; fRepresents.textContent=m.represents; fForms.textContent=m.forms;
     if(m.myth){ fMythRow.style.display=''; fMyth.textContent=m.myth; } else { fMythRow.style.display='none'; }
-    // reference image with cache-buster + visible error if not found
+    // reference image: show a placeholder while loading, a visible error if missing
     refPh.textContent='loading…'; refImg.style.display='none'; refPh.style.display='';
-    refImg.onload=()=>{ refImg.style.display=''; refPh.style.display='none'; };
+    // NOTE: setting style.display='' would revert to the stylesheet rule (.ref img{display:none}),
+    // which silently re-hides a successfully loaded image. Use an explicit 'block'.
+    refImg.onload=()=>{ refImg.style.display='block'; refPh.style.display='none'; };
     refImg.onerror=()=>{ refImg.style.display='none'; refPh.style.display=''; refPh.textContent='⚠ not found: images/'+id+'.jpg'; };
     refImg.src=`images/${id}.jpg`;
   }
   function setConf(p){ confPct.textContent = p==null ? '—' : p+'%'; confFill.style.width=(p==null?0:p)+'%'; }
 
   // ============ Detection gating ============
-  const ENTER=76, EXIT=58, MARGIN=9, HOLD=8, STILL=0.04;
+  // ENTER/EXIT tuned for the full 12-feature data-driven templates: peak match
+  // scores are lower than with the old sparse templates, so the lock threshold
+  // is lower too. MARGIN (beat the runner-up) is what guards against ambiguous
+  // locks; template separation is >=20 so 9 is safe. See tools/robustness.py.
+  const ENTER=68, EXIT=52, MARGIN=9, HOLD=8, STILL=0.04;
   let candidate=null, count=0, locked=null, lastSpoken=null, prevLm=null, lastLandmarks=null;
   function handMotion(lm){ if(!prevLm) return 1; const hs=dist(lm[0],lm[9])||1e-4; const idx=[0,4,8,12,16,20]; let s=0; for(const i of idx) s+=dist(lm[i],prevLm[i]); return (s/idx.length)/hs; }
   function update(det, still){
