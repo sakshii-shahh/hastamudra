@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>Hastamudra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Space+Grotesk:wght@300;400;500&family=Noto+Sans+Devanagari:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0d0d0f; --panel: #141416; --fg: #f4f1ea;
+    --muted: #8a8681; --accent: #c9a15a; --line: rgba(255,255,255,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 300;
+    background: var(--bg); color: var(--fg);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 30px 20px 30px; gap: 16px;
+  }
+
+  header { text-align: center; }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .brandtext { text-align: left; }
+  .emblem { height: 62px; width: auto; object-fit: contain; flex: 0 0 auto; }
+  h1 { font-family: 'Yatra One', 'Fraunces', serif; font-weight: 400; font-size: clamp(2.2rem, 5vw, 3.2rem); letter-spacing: 0.5px; line-height: 1; }
+  .tagline { color: var(--muted); font-size: 0.9rem; margin-top: 4px; font-style: italic; font-family: 'Fraunces', serif; }
+
+  .col { width: 100%; max-width: 1160px; display: flex; flex-direction: row; align-items: stretch; justify-content: center; gap: 16px; }
+
+  .video-wrap {
+    position: relative; flex: 1 1 auto; max-width: 820px; align-self: center;
+    aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden;
+    background: #050506; border: 1px solid var(--line);
+  }
+  #input_video { display: none; }
+  #output_canvas { width: 100%; height: 100%; display: block; transform: scaleX(-1); }
+  .status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 28px; background: rgba(13,13,15,0.9); color: var(--muted); font-size: 0.95rem; }
+  .status.hidden { display: none; }
+  .movehint { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 6px 14px; border-radius: 100px; background: rgba(13,13,15,0.7); color: var(--muted); font-size: 0.72rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+  .movehint.show { opacity: 1; }
+  .prompt { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: 82%; text-align: center; padding: 9px 18px; border-radius: 100px; background: rgba(13,13,15,0.72); color: var(--fg); font-size: 0.82rem; letter-spacing: 0.3px; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+  .prompt.show { opacity: 1; }
+
+  /* right info panel */
+  .panel {
+    flex: 0 0 330px; align-self: stretch; text-align: left;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; display: flex; flex-direction: column; gap: 12px;
+    max-height: 78vh; overflow-y: auto; transition: opacity .25s ease;
+  }
+  .panel.idle { opacity: 0.85; }
+  .plabel { font-size: 0.66rem; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); }
+
+  .ref { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; background: #000; border: 1px solid var(--line); flex: 0 0 auto; }
+  .ref img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: none; }
+  .ref .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; line-height: 1.4; color: var(--muted); font-size: 0.72rem; }
+
+  .idlebox .idle-title { font-family: 'Fraunces', serif; font-size: 1.15rem; color: var(--fg); }
+  .idlebox .idle-sub { color: var(--muted); font-size: 0.82rem; margin-top: 5px; line-height: 1.45; }
+
+  .detail .roman { font-family: 'Yatra One', 'Fraunces', serif; font-weight: 400; font-size: 1.7rem; line-height: 1.05; }
+  .detail .deva { font-family: 'Noto Sans Devanagari', serif; font-size: 1rem; opacity: 0.85; margin-top: 1px; margin-bottom: 4px; }
+  .field { margin-top: 9px; }
+  .field .k { display: block; font-size: 0.6rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); opacity: 0.85; margin-bottom: 2px; }
+  .field .v { font-size: 0.83rem; color: var(--fg); line-height: 1.4; }
+
+  .conf { margin-top: auto; padding-top: 6px; }
+  .conf-label { display: flex; justify-content: space-between; font-size: 0.66rem; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .fill { height: 100%; width: 0%; background: var(--accent); border-radius: 6px; transition: width .15s linear; }
+
+  footer { margin-top: 22px; color: var(--muted); font-size: 0.78rem; text-align: center; letter-spacing: 0.3px; font-style: italic; font-family: 'Fraunces', serif; }
+
+  @media (max-width: 780px){
+    .col { flex-direction: column; }
+    .panel { flex-basis: auto; width: 100%; align-self: auto; max-height: none; }
+    .video-wrap { width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img class="emblem" src="images/nataraja.png" alt="Nataraja" />
+      <div class="brandtext">
+        <h1>Hastamudra</h1>
+        <p class="tagline">Where the hand moves, the gaze follows.</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="col">
+    <div class="video-wrap">
+      <video id="input_video" playsinline></video>
+      <canvas id="output_canvas" width="640" height="480"></canvas>
+      <div class="prompt" id="prompt">Hold your hand in front of the camera to begin.</div>
+      <div class="movehint" id="moveHint">hold still</div>
+      <div class="status" id="status"><p>Starting camera… allow access when asked.</p></div>
+    </div>
+
+    <aside class="panel idle" id="panel">
+      <div class="plabel">Detected Mudra</div>
+      <div class="ref" id="ref">
+        <img id="refImg" alt="reference" />
+        <div class="ph" id="refPh">reference</div>
+      </div>
+
+      <div class="idlebox" id="idleBox">
+        <div class="idle-title">No mudra detected</div>
+        <div class="idle-sub">Raise one hand and keep it centered in the frame.</div>
+      </div>
+
+      <div class="detail" id="detail" style="display:none">
+        <div class="roman" id="roman"></div>
+        <div class="deva" id="deva"></div>
+        <div class="field"><span class="k">Meaning</span><span class="v" id="fMeaning"></span></div>
+        <div class="field"><span class="k">Represents</span><span class="v" id="fRepresents"></span></div>
+        <div class="field"><span class="k">Common in</span><span class="v" id="fForms"></span></div>
+        <div class="field" id="fMythRow"><span class="k">Mythology</span><span class="v" id="fMyth"></span></div>
+      </div>
+
+      <div class="conf">
+        <div class="conf-label"><span>Confidence</span><span id="confPct">—</span></div>
+        <div class="bar"><div class="fill" id="confFill"></div></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>Celebrating the richness of Indian classical traditions through technology. 🙏</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script>
+  const IMG_VER = 6; // bump to bust the browser image cache
+
+  // ============ 28 Asamyukta Hastas + educational content ============
+  const MUDRAS = {
+    pataka:       {roman:"Pataka", deva:"पताका", meaning:"Flag", speak:"पताका",
+      represents:"Clouds, a forest, a river, wind, a blessing, refusal, or the act of halting", forms:"Bharatanatyam · Kathak · Mohiniyattam",
+      myth:"The very first hasta a dancer is taught."},
+    tripataka:    {roman:"Tripataka", deva:"त्रिपताका", meaning:"Flag with three parts", speak:"त्रिपताका",
+      represents:"A crown, a tree, an arrow, or applying the sacred tilak", forms:"Bharatanatyam · Kuchipudi · Kathakali", myth:"Used to depict Indra and royalty."},
+    ardhapataka:  {roman:"Ardhapataka", deva:"अर्धपताका", meaning:"Half flag", speak:"अर्धपताका",
+      represents:"Leaves, a dagger, a tower, tender shoots, or writing", forms:"Bharatanatyam · Kuchipudi · Odissi", myth:""},
+    kartarimukha: {roman:"Kartarimukha", deva:"कर्तरीमुख", meaning:"Scissors", speak:"कर्तरीमुख",
+      represents:"Separation of lovers, opposition, lightning, or the corner of the eye", forms:"Bharatanatyam · Kathakali · Kuchipudi", myth:""},
+    mayura:       {roman:"Mayura", deva:"मयूर", meaning:"Peacock", speak:"मयूर",
+      represents:"A peacock's beak, wiping tears, parting the hair, or a creeper", forms:"Bharatanatyam · Mohiniyattam · Odissi", myth:"Evokes Krishna's peacock feather."},
+    ardhachandra: {roman:"Ardhachandra", deva:"अर्धचन्द्र", meaning:"Half moon", speak:"अर्धचन्द्र",
+      represents:"The crescent moon, a spear, the throat, the waist, or an offering", forms:"Bharatanatyam · Kuchipudi · Kathak", myth:"The hand offered in worship to a deity."},
+    arala:        {roman:"Arala", deva:"अराल", meaning:"Bent", speak:"अराल",
+      represents:"Drinking nectar or poison, or a fierce wind", forms:"Bharatanatyam · Kathakali", myth:""},
+    shukatunda:   {roman:"Shukatunda", deva:"शुकतुण्ड", meaning:"Parrot's beak", speak:"शुकतुण्ड",
+      represents:"Shooting an arrow, mystery, ferocity, or recalling", forms:"Bharatanatyam · Kuchipudi", myth:""},
+    mushti:       {roman:"Mushti", deva:"मुष्टि", meaning:"Fist", speak:"मुष्टि",
+      represents:"Steadiness, grasping hair, holding objects, or wrestling", forms:"Bharatanatyam · Kathakali · Kathak", myth:""},
+    shikhara:     {roman:"Shikhara", deva:"शिखर", meaning:"Peak", speak:"शिखर",
+      represents:"A bow, a pillar, the lip, saying 'no', or an embrace", forms:"Bharatanatyam · Kuchipudi", myth:"The bow of Kamadeva, god of love."},
+    kapitha:      {roman:"Kapittha", deva:"कपित्थ", meaning:"Wood apple", speak:"कपित्थ",
+      represents:"Holding cymbals, milking a cow, or grasping a garland", forms:"Bharatanatyam · Mohiniyattam", myth:"Associated with Lakshmi and Saraswati."},
+    katakamukha:  {roman:"Katakamukha", deva:"कटकामुख", meaning:"Opening in a bracelet", speak:"कटकामुख",
+      represents:"Plucking flowers, holding a garland or pearls, or drawing an arrow", forms:"Bharatanatyam · Kuchipudi · Odissi", myth:""},
+    suchi:        {roman:"Suchi", deva:"सूची", meaning:"Needle", speak:"सूची",
+      represents:"The number one, the sun, a city, a threat, or 'that one'", forms:"Bharatanatyam · Kathakali · Kathak", myth:""},
+    chandrakala:  {roman:"Chandrakala", deva:"चन्द्रकला", meaning:"Digit of the moon", speak:"चन्द्रकला",
+      represents:"The crescent moon, a face, or a river", forms:"Bharatanatyam · Kuchipudi", myth:"The crescent worn on Shiva's crown."},
+    padmakosha:   {roman:"Padmakosha", deva:"पद्मकोश", meaning:"Lotus bud", speak:"पद्मकोश",
+      represents:"A lotus bud, a fruit, a ball, or an offering of flowers", forms:"Bharatanatyam · Mohiniyattam · Odissi", myth:""},
+    sarpashirsha: {roman:"Sarpashirsha", deva:"सर्पशीर्ष", meaning:"Snake hood", speak:"सर्पशीर्ष",
+      represents:"A serpent, offering sandal paste, or nourishing", forms:"Bharatanatyam · Kathakali", myth:"The serpent coiled around Shiva."},
+    mrigashirsha: {roman:"Mrigashirsha", deva:"मृगशीर्ष", meaning:"Deer head", speak:"मृगशीर्ष",
+      represents:"A deer, women, the cheek, fear, or summoning someone", forms:"Bharatanatyam · Mohiniyattam", myth:""},
+    simhamukha:   {roman:"Simhamukha", deva:"सिंहमुख", meaning:"Lion face", speak:"सिंहमुख",
+      represents:"A lion, a fire offering, a hare, a lotus, or coral", forms:"Bharatanatyam · Kuchipudi", myth:"Evokes Narasimha, the lion avatar of Vishnu."},
+    kangula:      {roman:"Kangula", deva:"कङ्गूल", meaning:"Tail / Lily", speak:"कंगूल",
+      represents:"A small fruit, a water lily, or a bell", forms:"Bharatanatyam · Odissi", myth:""},
+    alapadma:     {roman:"Alapadma", deva:"अलपद्म", meaning:"Full lotus", speak:"अलपद्म",
+      represents:"A blossoming lotus, beauty, longing, a lake, or the moon", forms:"Bharatanatyam · Mohiniyattam · Odissi", myth:"The lotus of Lakshmi, goddess of abundance."},
+    chatura:      {roman:"Chatura", deva:"चतुर", meaning:"Square / Cleverness", speak:"चतुर",
+      represents:"A small quantity, musk, gold, an oath, or cleverness", forms:"Bharatanatyam · Kuchipudi", myth:""},
+    bhramara:     {roman:"Bhramara", deva:"भ्रमर", meaning:"Bee", speak:"भ्रमर",
+      represents:"A bee, a parrot, a crane, or a wing", forms:"Bharatanatyam · Mohiniyattam", myth:""},
+    hamsasya:     {roman:"Hamsasya", deva:"हंसास्य", meaning:"Swan beak", speak:"हंसास्य",
+      represents:"Holding delicate things, initiation, certainty, jasmine, or a pearl", forms:"Bharatanatyam · Kuchipudi · Odissi", myth:"The swan is the vehicle of Saraswati."},
+    hamsapaksha:  {roman:"Hamsapaksha", deva:"हंसपक्ष", meaning:"Swan wing", speak:"हंसपक्ष",
+      represents:"Placing marks, the number six, joining, or a bridge", forms:"Bharatanatyam · Kathakali", myth:""},
+    sandamsha:    {roman:"Sandamsha", deva:"संदंश", meaning:"Pincers", speak:"संदंश",
+      represents:"A pair of pincers, an offering, a wound, an insect, or fear", forms:"Bharatanatyam · Kuchipudi", myth:""},
+    mukula:       {roman:"Mukula", deva:"मुकुल", meaning:"Flower bud", speak:"मुकुल",
+      represents:"A bud, eating, a water lily, or the arrow of the love god", forms:"Bharatanatyam · Mohiniyattam", myth:""},
+    tamrachuda:   {roman:"Tamrachuda", deva:"ताम्रचूड", meaning:"Rooster", speak:"ताम्रचूड",
+      represents:"A rooster, a crow, a camel, a calf, or writing", forms:"Bharatanatyam · Kuchipudi", myth:""},
+    trishula:     {roman:"Trishula", deva:"त्रिशूल", meaning:"Trident", speak:"त्रिशूल",
+      represents:"A trident, the bilva leaf, or the number three", forms:"Bharatanatyam · Kathakali", myth:"The trident weapon of Lord Shiva."},
+  };
+
+  // ============ Feature templates ============
+  const TPL = {
+    pataka:       {oI:1,oM:1,oR:1,oP:1,oT:0,  sIM:.25,sMR:.25,sRP:.25},
+    tripataka:    {oI:1,oM:1,oR:0,oP:1,oT:0},
+    ardhapataka:  {oI:1,oM:1,oR:0,oP:0,oT:0,  sIM:.25},
+    kartarimukha: {oI:1,oM:1,oR:0,oP:0,oT:0,  sIM:.75},
+    mayura:       {oI:1,oM:1,oP:1,oR:.3, dTR:.15},
+    ardhachandra: {oI:1,oM:1,oR:1,oP:1,oT:1,  sIM:.35},
+    arala:        {oM:1,oR:1,oP:1,oI:.45,oT:.35},
+    shukatunda:   {oM:1,oP:1,oI:.4,oR:.35,oT:.3},
+    mushti:       {oI:0,oM:0,oR:0,oP:0,oT:0},
+    shikhara:     {oI:0,oM:0,oR:0,oP:0,oT:1},
+    kapitha:      {oI:.15,oM:0,oR:0,oP:0,oT:.3, dTI:.25},
+    katakamukha:  {oR:1,oP:1, dTI:.25,dTM:.35},
+    suchi:        {oI:1,oM:0,oR:0,oP:0,oT:0},
+    chandrakala:  {oI:1,oM:0,oR:0,oP:0,oT:1},
+    padmakosha:   {oI:.5,oM:.5,oR:.5,oP:.5,oT:.5, sIM:.55,sMR:.55,sRP:.55},
+    sarpashirsha: {oI:.6,oM:.6,oR:.6,oP:.6,oT:.3, sIM:.2,sMR:.2},
+    mrigashirsha: {oI:0,oM:0,oR:0,oP:1,oT:1},
+    simhamukha:   {oI:1,oP:1,oM:0,oR:0, dTM:.3,dTR:.3},
+    kangula:      {oI:1,oM:1,oR:0,oP:1,oT:.45},
+    alapadma:     {oI:1,oM:1,oR:1,oP:1,oT:1, sIM:.6,sMR:.6,sRP:.6},
+    chatura:      {oI:1,oM:1,oR:1,oP:.4,oT:.2, sRP:.5},
+    bhramara:     {oR:1,oP:1,oI:.4, dTM:.2},
+    hamsasya:     {oM:1,oR:1,oP:1, dTI:.2},
+    hamsapaksha:  {oI:1,oM:1,oR:1,oP:1,oT:0, sRP:.6},
+    sandamsha:    {oM:.7,oR:.7,oP:.7, dTI:.25},
+    mukula:       {oI:.75,oM:.75,oR:.75,oP:.75, dTI:.22,dTM:.22,dTR:.22,dTP:.28, sIM:.18,sMR:.18,sRP:.18},
+    tamrachuda:   {oI:.4,oR:.6,oP:.6, dTI:.25,dTM:.25},
+    trishula:     {oI:1,oM:1,oR:1,oP:0, dTP:.2},
+  };
+  const BASE = []; // [] = all 28
+
+  // ============ Geometry ============
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0)); }
+  function angle(a,b,c){
+    const v1={x:a.x-b.x,y:a.y-b.y,z:(a.z||0)-(b.z||0)};
+    const v2={x:c.x-b.x,y:c.y-b.y,z:(c.z||0)-(b.z||0)};
+    const dot=v1.x*v2.x+v1.y*v2.y+v1.z*v2.z;
+    const m1=Math.hypot(v1.x,v1.y,v1.z), m2=Math.hypot(v2.x,v2.y,v2.z);
+    if(!m1||!m2) return 180;
+    return Math.acos(Math.max(-1,Math.min(1,dot/(m1*m2))))*180/Math.PI;
+  }
+  const clamp01 = x => Math.max(0, Math.min(1, x));
+  function features(lm){
+    const hs = dist(lm[0], lm[9]) || 1e-4;
+    const open = (a,b,c) => clamp01((angle(lm[a],lm[b],lm[c]) - 95) / 77);
+    const nd = (a,b) => dist(lm[a],lm[b]) / hs;
+    return {
+      oI: open(5,6,8), oM: open(9,10,12), oR: open(13,14,16), oP: open(17,18,20),
+      oT: clamp01((nd(4,5) - 0.35) / 0.75),
+      dTI: nd(4,8), dTM: nd(4,12), dTR: nd(4,16), dTP: nd(4,20),
+      sIM: nd(8,12), sMR: nd(12,16), sRP: nd(16,20),
+    };
+  }
+  const tol = k => (k[0]==='o' ? 0.32 : 0.30);
+  function scoreOne(f, tpl){ let err=0,n=0; for(const k in tpl){const d=(f[k]-tpl[k])/tol(k); err+=d*d; n++;} return n?100*Math.exp(-err/n):0; }
+  function classify(lm){
+    const f = features(lm);
+    const ids = (Array.isArray(BASE) && BASE.length) ? BASE : Object.keys(TPL);
+    let b1=null,s1=-1,s2=-1;
+    for (const id of ids){ const s=scoreOne(f,TPL[id]); if(s>s1){s2=s1;s1=s;b1=id;} else if(s>s2){s2=s;} }
+    return { id:b1, conf:Math.round(s1), margin:Math.round(s1-s2) };
+  }
+
+  // ============ Voice ============
+  let voices=[], indianVoice=null;
+  function loadVoices(){ if(!window.speechSynthesis) return; voices=speechSynthesis.getVoices();
+    indianVoice = voices.find(v=>/hi[-_]IN/i.test(v.lang)) || voices.find(v=>/en[-_]IN/i.test(v.lang)||/india|hindi/i.test(v.name)) || null; }
+  if(window.speechSynthesis){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+  function speak(id){ if(!window.speechSynthesis) return; const m=MUDRAS[id]; if(!m) return;
+    speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(m.speak);
+    if(indianVoice){u.voice=indianVoice;u.lang=indianVoice.lang;} else {u.lang='hi-IN';} u.rate=0.85; speechSynthesis.speak(u); }
+  window.addEventListener('pointerdown', ()=>{ if(window.speechSynthesis) speechSynthesis.resume(); }, {once:true});
+
+  // ============ UI ============
+  const panel=document.getElementById('panel');
+  const refImg=document.getElementById('refImg'), refPh=document.getElementById('refPh');
+  const idleBox=document.getElementById('idleBox'), detail=document.getElementById('detail');
+  const romanEl=document.getElementById('roman'), devaEl=document.getElementById('deva');
+  const fMeaning=document.getElementById('fMeaning'), fRepresents=document.getElementById('fRepresents');
+  const fForms=document.getElementById('fForms'), fMyth=document.getElementById('fMyth'), fMythRow=document.getElementById('fMythRow');
+  const confPct=document.getElementById('confPct'), confFill=document.getElementById('confFill');
+  const moveHint=document.getElementById('moveHint');
+  const promptEl=document.getElementById('prompt');
+
+  let shownId=null;
+  function showMudra(id){
+    if(id===shownId) return; shownId=id;
+    if(!id){
+      panel.classList.add('idle'); idleBox.style.display=''; detail.style.display='none';
+      refImg.style.display='none'; refPh.style.display=''; refPh.textContent='reference';
+      return;
+    }
+    const m=MUDRAS[id];
+    panel.classList.remove('idle'); idleBox.style.display='none'; detail.style.display='';
+    romanEl.textContent=m.roman; devaEl.textContent=m.deva;
+    fMeaning.textContent=m.meaning; fRepresents.textContent=m.represents; fForms.textContent=m.forms;
+    if(m.myth){ fMythRow.style.display=''; fMyth.textContent=m.myth; } else { fMythRow.style.display='none'; }
+    // reference image with cache-buster + visible error if not found
+    refPh.textContent='loading…'; refImg.style.display='none'; refPh.style.display='';
+    refImg.onload=()=>{ refImg.style.display=''; refPh.style.display='none'; };
+    refImg.onerror=()=>{ refImg.style.display='none'; refPh.style.display=''; refPh.textContent='⚠ not found: images/'+id+'.jpg'; };
+    refImg.src=`images/${id}.jpg`;
+  }
+  function setConf(p){ confPct.textContent = p==null ? '—' : p+'%'; confFill.style.width=(p==null?0:p)+'%'; }
+
+  // ============ Detection gating ============
+  const ENTER=76, EXIT=58, MARGIN=9, HOLD=8, STILL=0.04;
+  let candidate=null, count=0, locked=null, lastSpoken=null, prevLm=null, lastLandmarks=null;
+  function handMotion(lm){ if(!prevLm) return 1; const hs=dist(lm[0],lm[9])||1e-4; const idx=[0,4,8,12,16,20]; let s=0; for(const i of idx) s+=dist(lm[i],prevLm[i]); return (s/idx.length)/hs; }
+  function update(det, still){
+    const liveConf=()=> (locked&&lastLandmarks) ? (det&&det.id===locked?det.conf:Math.round(scoreOne(features(lastLandmarks),TPL[locked]))) : null;
+    if(!still){ moveHint.classList.toggle('show', !!lastLandmarks); candidate=null; count=0; setConf(locked?liveConf():null); return; }
+    moveHint.classList.remove('show');
+    let raw;
+    if(det.id && det.conf>=ENTER && det.margin>=MARGIN) raw=det.id;
+    else if(locked && det.id===locked && det.conf>=EXIT) raw=locked;
+    else raw=null;
+    if(raw===candidate) count++; else { candidate=raw; count=1; }
+    if(count>=HOLD && locked!==candidate){
+      locked=candidate; showMudra(locked);
+      if(locked && locked!==lastSpoken){ speak(locked); lastSpoken=locked; }
+      if(!locked) lastSpoken=null;
+    }
+    setConf(locked?liveConf():null);
+  }
+
+  // ============ MediaPipe ============
+  const videoElement=document.getElementById('input_video');
+  const canvasElement=document.getElementById('output_canvas');
+  const ctx=canvasElement.getContext('2d');
+  const statusEl=document.getElementById('status');
+  const hands=new Hands({ locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+  hands.setOptions({ maxNumHands:1, modelComplexity:1, minDetectionConfidence:0.7, minTrackingConfidence:0.6 });
+  hands.onResults(onResults);
+  function onResults(results){
+    ctx.save(); ctx.clearRect(0,0,canvasElement.width,canvasElement.height);
+    ctx.drawImage(results.image,0,0,canvasElement.width,canvasElement.height);
+    if(results.multiHandLandmarks && results.multiHandLandmarks.length){
+      const lm=results.multiHandLandmarks[0]; lastLandmarks=lm;
+      if(window.drawConnectors && window.HAND_CONNECTIONS){
+        drawConnectors(ctx,lm,HAND_CONNECTIONS,{color:'rgba(201,161,90,0.75)',lineWidth:2});
+        drawLandmarks(ctx,lm,{color:'rgba(244,241,234,0.9)',lineWidth:1,radius:2.5});
+      }
+      const still=handMotion(lm)<STILL; prevLm=lm; promptEl.classList.remove('show'); update(classify(lm), still);
+    } else { lastLandmarks=null; prevLm=null; moveHint.classList.remove('show'); promptEl.classList.add('show'); update({id:null,conf:0,margin:0}, true); }
+    ctx.restore();
+  }
+  (async function start(){
+    try{
+      const camera=new Camera(videoElement,{ onFrame:async()=>{ await hands.send({image:videoElement}); }, width:640, height:480 });
+      await camera.start(); statusEl.classList.add('hidden');
+      if(window.speechSynthesis) speechSynthesis.cancel();
+    }catch(e){ console.error(e); statusEl.innerHTML='<p>Could not access the camera. Allow permission and open over <strong>https</strong> or localhost, then reload.</p>'; statusEl.classList.remove('hidden'); }
+  })();
+  </script>
+</body>
+</html>
