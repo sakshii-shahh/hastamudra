@@ -307,18 +307,34 @@
   function setConf(p){ confPct.textContent = p==null ? '—' : p+'%'; confFill.style.width=(p==null?0:p)+'%'; }
 
   // ============ Detection gating ============
-  const ENTER=76, EXIT=58, MARGIN=9, HOLD=8, STILL=0.04;
-  let candidate=null, count=0, locked=null, lastSpoken=null, prevLm=null, lastLandmarks=null;
+  // Locking is driven by *persistence* — a confident candidate seen for HOLD
+  // frames — not by holding perfectly still, which keeps mudra-to-mudra
+  // transitions smooth. Landmarks are EMA-smoothed (SMOOTH) to cut per-frame
+  // jitter so the Match% is steady and HOLD accumulates reliably; the MARGIN
+  // gate (beat the runner-up) prevents flicker between similar mudras.
+  //   HOLD  – frames a pose must persist to lock (lower = snappier)
+  //   SMOOTH– EMA weight for new frames, 0..1 (lower = smoother but laggier)
+  //   STILL – motion above this only drives the "hold still" hint now
+  const ENTER=76, EXIT=58, MARGIN=9, HOLD=6, STILL=0.06, SMOOTH=0.5;
+  let candidate=null, count=0, locked=null, lastSpoken=null, prevLm=null, lastLandmarks=null, smLm=null;
   function handMotion(lm){ if(!prevLm) return 1; const hs=dist(lm[0],lm[9])||1e-4; const idx=[0,4,8,12,16,20]; let s=0; for(const i of idx) s+=dist(lm[i],prevLm[i]); return (s/idx.length)/hs; }
-  function update(det, still){
+  function smoothLandmarks(lm){
+    if(!smLm){ smLm = lm.map(p=>({x:p.x,y:p.y,z:p.z||0})); return smLm; }
+    for(let i=0;i<lm.length;i++){
+      smLm[i].x += SMOOTH*(lm[i].x - smLm[i].x);
+      smLm[i].y += SMOOTH*(lm[i].y - smLm[i].y);
+      smLm[i].z += SMOOTH*((lm[i].z||0) - smLm[i].z);
+    }
+    return smLm;
+  }
+  function update(det, moving){
     const liveConf=()=> (locked&&lastLandmarks) ? (det&&det.id===locked?det.conf:Math.round(scoreOne(features(lastLandmarks),TPL[locked]))) : null;
-    if(!still){ moveHint.classList.toggle('show', !!lastLandmarks); candidate=null; count=0; setConf(locked?liveConf():null); return; }
-    moveHint.classList.remove('show');
+    moveHint.classList.toggle('show', moving && !!lastLandmarks);
     let raw;
     if(det.id && det.conf>=ENTER && det.margin>=MARGIN) raw=det.id;
     else if(locked && det.id===locked && det.conf>=EXIT) raw=locked;
     else raw=null;
-    if(raw===candidate) count++; else { candidate=raw; count=1; }
+    if(raw===candidate) count=Math.min(count+1, HOLD); else { candidate=raw; count=1; }
     if(count>=HOLD && locked!==candidate){
       locked=candidate; showMudra(locked);
       if(locked && locked!==lastSpoken){ speak(locked); lastSpoken=locked; }
@@ -339,13 +355,16 @@
     ctx.save(); ctx.clearRect(0,0,canvasElement.width,canvasElement.height);
     ctx.drawImage(results.image,0,0,canvasElement.width,canvasElement.height);
     if(results.multiHandLandmarks && results.multiHandLandmarks.length){
-      const lm=results.multiHandLandmarks[0]; lastLandmarks=lm;
+      const lm=results.multiHandLandmarks[0];
       if(window.drawConnectors && window.HAND_CONNECTIONS){
         drawConnectors(ctx,lm,HAND_CONNECTIONS,{color:'rgba(201,161,90,0.75)',lineWidth:2});
         drawLandmarks(ctx,lm,{color:'rgba(244,241,234,0.9)',lineWidth:1,radius:2.5});
       }
-      const still=handMotion(lm)<STILL; prevLm=lm; promptEl.classList.remove('show'); update(classify(lm), still);
-    } else { lastLandmarks=null; prevLm=null; moveHint.classList.remove('show'); promptEl.classList.add('show'); update({id:null,conf:0,margin:0}, true); }
+      const moving=handMotion(lm)>=STILL;      // raw motion drives the hint only
+      const sm=smoothLandmarks(lm);            // classify on the smoothed stream
+      lastLandmarks=sm; prevLm=lm;
+      promptEl.classList.remove('show'); update(classify(sm), moving);
+    } else { lastLandmarks=null; prevLm=null; smLm=null; moveHint.classList.remove('show'); promptEl.classList.add('show'); update({id:null,conf:0,margin:0}, false); }
     ctx.restore();
   }
   (async function start(){
