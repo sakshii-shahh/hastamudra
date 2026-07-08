@@ -73,7 +73,10 @@
   .bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; }
   .fill { height: 100%; width: 0%; background: var(--accent); border-radius: 6px; transition: width .15s linear; }
 
-  footer { margin-top: 22px; color: var(--muted); font-size: 0.78rem; text-align: center; letter-spacing: 0.3px; font-style: italic; font-family: 'Fraunces', serif; }
+  footer { margin-top: 22px; color: var(--muted); font-size: 0.78rem; text-align: center; letter-spacing: 0.3px; font-style: italic; font-family: 'Fraunces', serif; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  footer a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(201,161,90,0.35); padding-bottom: 1px; transition: border-color .2s ease; }
+  footer a:hover { border-bottom-color: var(--accent); }
+  footer .copyright { font-style: normal; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 0.72rem; letter-spacing: 0.5px; opacity: 0.8; }
 
   @media (max-width: 780px){
     .col { flex-direction: column; }
@@ -130,7 +133,11 @@
     </aside>
   </div>
 
-  <footer>Celebrating the richness of Indian classical traditions through technology. 🙏</footer>
+  <footer>
+    <span>Celebrating the richness of Indian classical traditions through technology. 🙏</span>
+    <span><a href="https://arc.net/l/quote/mgcrgssn" target="_blank" rel="noopener noreferrer">How &amp; why I built this</a></span>
+    <span class="copyright">© 2026 Sakshi Shah</span>
+  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
